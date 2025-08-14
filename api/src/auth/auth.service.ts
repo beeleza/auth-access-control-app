@@ -28,14 +28,89 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const paylod = { sub: user.id, name: user.name, email: user.email, role: user.role };
+    const paylod = {
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const access_token = await this.jwtService.signAsync(paylod, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '15m',
+    });
+
+    const newRefreshToken = await this.jwtService.signAsync(paylod, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '7d',
+    });
+
+    await this.usersService.updateRefreshToken(
+      user.id,
+      await bcrypt.hash(newRefreshToken, 10),
+    );
+
     return {
-      access_token: await this.jwtService.signAsync(paylod),
+      access_token,
+      refresh_token: newRefreshToken,
     };
   }
 
   async signUp(createUserDto: CreateUserDto) {
     const result = await this.usersService.create(createUserDto);
     return result;
+  }
+
+  async refreshTokens(refreshToken: string) {
+    let payload: any;
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET,
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user || !user.hashedRefreshToken) {
+      throw new UnauthorizedException('Access Denied');
+    }
+
+    const isValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
+    if (!isValid) {
+      throw new UnauthorizedException('Access Denied');
+    }
+
+    const newPayload = {
+      sub: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
+    const newAccessToken = await this.jwtService.signAsync(newPayload, {
+      secret: process.env.JWT_SECRET,
+      expiresIn: '15m',
+    });
+
+    const newRefreshToken = await this.jwtService.signAsync(newPayload, {
+      secret: process.env.JWT_REFRESH_SECRET,
+      expiresIn: '7d',
+    });
+
+    await this.usersService.updateRefreshToken(
+      user.id,
+      await bcrypt.hash(newRefreshToken, 10),
+    );
+
+    return {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+    };
+  }
+
+  async logout(userId: string) {
+    await this.usersService.updateRefreshToken(userId, null);
+    return { message: 'Logged out successfully' };
   }
 }

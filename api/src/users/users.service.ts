@@ -41,6 +41,12 @@ export class UsersService {
   }
 
   async findById(id: string) {
-    return await this.userRepository.findOne({ where: { id } })
+    return await this.userRepository.findOne({ where: { id } });
+  }
+
+  async updateRefreshToken(userId: string, refreshToken: string | null) {
+    return this.userRepository.update(userId, {
+      hashedRefreshToken: refreshToken,
+    });
   }
 }
