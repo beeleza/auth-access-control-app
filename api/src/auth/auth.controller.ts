@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -45,5 +46,10 @@ export class AuthController {
   async logout(@Req() req: any, @Res() res: Response) {
     const userId = req.user?.sub;
     return await this.authService.logout(userId, res);
+  }
+
+  @Get('validate-token')
+  async validateToken(@Req() req: Request) {
+    return this.authService.validateToken(req);
   }
 }

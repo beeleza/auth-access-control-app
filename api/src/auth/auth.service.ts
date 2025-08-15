@@ -130,4 +130,22 @@ export class AuthService {
 
     return res.json({ message: 'Logged out successfully' });
   }
+
+  async validateToken(req: Request) {
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+      return { valid: false, reason: 'No token provided' };
+    }
+
+    const token = authHeader.split(' ')[1];
+
+    try {
+      const decoded = this.jwtService.verify(token, {
+        secret: process.env.JWT_SECRET || 'segredo-super-seguro',
+      });
+      return { valid: true, payload: decoded };
+    } catch (err) {
+      return { valid: false, reason: 'Invalid or expired token' };
+    }
+  }
 }
