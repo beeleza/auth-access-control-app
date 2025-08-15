@@ -5,7 +5,7 @@ import {
   HttpStatus,
   Post,
   Req,
-  UnauthorizedException,
+  Res,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
@@ -13,6 +13,7 @@ import { Public } from './public.decorator';
 import { SignUpDto } from './dto/sign-up.dto';
 import { Roles } from './roles.decorator';
 import { Role } from 'src/users/enum/role.enum';
+import type { Request, Response } from 'express';
 
 @Controller('auth')
 export class AuthController {
@@ -21,12 +22,12 @@ export class AuthController {
   @Public()
   @HttpCode(HttpStatus.OK)
   @Post('login')
-  async signIn(@Body() signInDto: SignInDto) {
-    return await this.authService.signIn(signInDto.email, signInDto.password);
+  async signIn(@Body() signInDto: SignInDto, @Res() res: Response) {
+    return await this.authService.signIn(signInDto.email, signInDto.password, res);
   }
 
   @Roles(Role.Admin)
-//   @Public()
+  // @Public()
   @HttpCode(HttpStatus.CREATED)
   @Post('signup')
   async signUp(@Body() signUpDto: SignUpDto) {
@@ -34,15 +35,15 @@ export class AuthController {
   }
 
   @Post('refresh')
-  async refresh(@Body('refresh_token') refreshToken: string) {
-    if (!refreshToken) {
-      throw new UnauthorizedException('Refresh token is required');
-    }
-    return await this.authService.refreshTokens(refreshToken);
+  async refresh(@Req() req: Request, @Res() res: Response) {
+    const refreshToken = req.cookies['refresh_token'];
+    console.log(refreshToken)
+    return await this.authService.refreshTokens(req, res);
   }
 
   @Post('logout')
-  async logout(@Body() body: { userId: string }) {
-    return this.authService.logout(body.userId);
+  async logout(@Req() req: any, @Res() res: Response) {
+    const userId = req.user?.sub;
+    return await this.authService.logout(userId, res);
   }
 }

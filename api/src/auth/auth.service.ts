@@ -7,6 +7,7 @@ import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { Request, Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -15,7 +16,7 @@ export class AuthService {
     private jwtService: JwtService,
   ) {}
 
-  async signIn(email: string, password: string) {
+  async signIn(email: string, password: string, res: Response) {
     const user = await this.usersService.findByEmail(email);
 
     if (!user) {
@@ -47,13 +48,18 @@ export class AuthService {
 
     await this.usersService.updateRefreshToken(
       user.id,
-      await bcrypt.hash(newRefreshToken, 10),
+      await bcrypt.hash(newRefreshToken, 8),
     );
 
-    return {
-      access_token,
-      refresh_token: newRefreshToken,
-    };
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+    console.log('entrou aqui.');
+
+    return res.json({ access_token });
   }
 
   async signUp(createUserDto: CreateUserDto) {
@@ -61,7 +67,10 @@ export class AuthService {
     return result;
   }
 
-  async refreshTokens(refreshToken: string) {
+  async refreshTokens(req: Request, res: Response) {
+    const refreshToken = req.cookies['refresh_token'];
+    if (!refreshToken) throw new UnauthorizedException('No refresh token');
+
     let payload: any;
     try {
       payload = await this.jwtService.verifyAsync(refreshToken, {
@@ -77,9 +86,7 @@ export class AuthService {
     }
 
     const isValid = await bcrypt.compare(refreshToken, user.hashedRefreshToken);
-    if (!isValid) {
-      throw new UnauthorizedException('Access Denied');
-    }
+    if (!isValid) throw new UnauthorizedException('Access Denied');
 
     const newPayload = {
       sub: user.id,
@@ -100,17 +107,28 @@ export class AuthService {
 
     await this.usersService.updateRefreshToken(
       user.id,
-      await bcrypt.hash(newRefreshToken, 10),
+      await bcrypt.hash(newRefreshToken, 8),
     );
 
-    return {
-      access_token: newAccessToken,
-      refresh_token: newRefreshToken,
-    };
+    res.cookie('refresh_token', newRefreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.json({ access_token: newAccessToken });
   }
 
-  async logout(userId: string) {
+  async logout(userId: string, res: Response) {
     await this.usersService.updateRefreshToken(userId, null);
-    return { message: 'Logged out successfully' };
+
+    res.clearCookie('refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    return res.json({ message: 'Logged out successfully' });
   }
 }
