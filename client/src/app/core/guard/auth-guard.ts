@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
+import { catchError, map, of } from 'rxjs';
 
 export const authGuard: CanActivateFn = (route, state) => {
   const authService = inject(AuthService);
@@ -8,12 +9,23 @@ export const authGuard: CanActivateFn = (route, state) => {
 
   const token = authService.getAccessToken();
 
-  if (token) {
-    return true;
+  if (!token) {
+    router.navigate(['/auth/login'], {
+      queryParams: { returnUrl: state.url },
+    });
+    return false;
   }
 
-  router.navigate(['/auth/login'], {
-    queryParams: { returnUrl: state.url }
-  });
-  return false;
+  // validate token with backend
+  return authService.validateToken().pipe(
+    map(() => true), // token valid → allow
+    catchError(() => {
+      // token invalid → clear storage and redirect
+      authService.logout();
+      router.navigate(['/auth/login'], {
+        queryParams: { returnUrl: state.url },
+      });
+      return of(false);
+    })
+  );
 };

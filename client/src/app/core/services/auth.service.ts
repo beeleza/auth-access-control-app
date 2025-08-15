@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
 
@@ -29,15 +29,29 @@ export class AuthService {
     sessionStorage.removeItem('access_token');
     this.http.post(`${this.apiURL}/auth/logout`, {}, { withCredentials: true }).subscribe({
       next: () => this.router.navigate(['/auth/login']),
-      error: () => this.router.navigate(['/auth/login']), // mesmo em erro redireciona
+      error: () => this.router.navigate(['/auth/login']),
     });
   }
 
-  saveAccessToken(token: string) {
+  validateToken() {
+    const token: string | null = this.getAccessToken();
+
+    if (!token) {
+      return new Observable((observer) => {
+        observer.next({ valid: false, reason: 'no token' });
+        observer.complete();
+      });
+    }
+
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.get(`${this.apiURL}/auth/validate-token`, { headers });
+  }
+
+  saveAccessToken(token: string): void {
     return sessionStorage.setItem('access_token', token);
   }
 
-  getAccessToken() {
+  getAccessToken(): string | null {
     return sessionStorage.getItem('access_token');
   }
 }
