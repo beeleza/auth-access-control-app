@@ -1,0 +1,51 @@
+<div class="flex justify-center items-center min-h-screen px-2">
+  <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="card w-full max-w-sm shadow-lg py-6 bg-neutral-950 px-2">
+    <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+
+    <div class="form-control mb-4">
+      <label class="label">
+        <span class="label-text">Email</span>
+      </label>
+      <input 
+        type="email" 
+        placeholder="Your email" 
+        class="input input-bordered w-full"
+        formControlName="email"
+      />
+      @if (email?.invalid && (email?.dirty || email?.touched)) {
+        <div role="alert" class="alert alert-error alert-soft mt-2">
+          @if (email?.hasError('required')) {
+            <span>Email is required</span>
+          }
+          @if (email?.hasError('email')) {
+            <span>Invalid email</span>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="form-control mb-6">
+      <label class="label">
+        <span class="label-text">Password</span>
+      </label>
+      <input 
+        type="password" 
+        placeholder="Your password" 
+        class="input input-bordered w-full" 
+        formControlName="password"
+      />
+      @if (password?.invalid && (password?.dirty || password?.touched)) {
+        <div role="alert" class="alert alert-error alert-soft mt-2">
+          @if (password?.hasError('required')) {
+            <span>password is required</span>
+          }
+          @if (password?.hasError('minlength')) {
+            <span>password must be at least 6 characters long</span>
+          }
+        </div>
+      }
+    </div>
+
+    <button class="btn btn-primary w-full" [disabled]="!loginForm.valid">Login</button>
+  </form>
+</div>
