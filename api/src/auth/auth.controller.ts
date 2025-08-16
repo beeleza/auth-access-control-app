@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
@@ -15,10 +16,17 @@ import { SignUpDto } from './dto/sign-up.dto';
 import { Roles } from './roles.decorator';
 import { Role } from 'src/users/enum/role.enum';
 import type { Request, Response } from 'express';
+import { AuthGuard } from './auth.guard';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
+
+  @UseGuards(AuthGuard)
+  @Get('profile')
+  async getProfile(@Req() req) {
+    return req.user;
+  }
 
   @Public()
   @HttpCode(HttpStatus.OK)

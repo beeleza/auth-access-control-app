@@ -3,11 +3,8 @@ import { environment } from '../../../environments/environment';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, tap } from 'rxjs';
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+import { LoginRequest } from '../models/LoginRequest';
+import { User } from '../models/User';
 
 @Injectable({
   providedIn: 'root',
@@ -31,6 +28,16 @@ export class AuthService {
       next: () => this.router.navigate(['/auth/login']),
       error: () => this.router.navigate(['/auth/login']),
     });
+  }
+
+  getProfile(): Observable<User> {
+    const token = this.getAccessToken();
+    if(!token) {
+      return new Observable<User>((obs) => obs.complete());
+    }
+
+    const headers = new HttpHeaders().set('Authorization', `Bearer ${token}`);
+    return this.http.get<User>(`${this.apiURL}/auth/profile`, { headers });
   }
 
   validateToken() {
